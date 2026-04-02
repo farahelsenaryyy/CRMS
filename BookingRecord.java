@@ -69,14 +69,12 @@ public class BookingRecord {
 
     @Override
     public String toString() {
-        return "BookingRecord{" +
-                "client=" + client +
-                ", car=" + car +
-                ", agent=" + agent +
-                ", rentalStartDate=" + rentalStartDate +
-                ", rentalEndDate=" + rentalEndDate +
-                ", baseCost=" + baseCost +
-                '}';
+        return "BookingRecord" +
+                " Client: " + getClient().getName() +
+                ", Car: " + getCar().getModel() +
+                ", Agent: " + getAgent().getName() +
+                ", StartDate: " + getRentalStartDate() +
+                ", EndDate: " + getRentalEndDate() +
+                ", BaseCost: " + getBaseCost();
     }
-
 }
