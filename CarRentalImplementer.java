@@ -1,47 +1,90 @@
 package CRMS;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class CarRentalImplementer implements CRMS {
 
+    private Scanner sc = new Scanner(System.in);
+
     @Override
     public RentalSystem InitializeRentalSystem(int numOfClients, int numOfCars, int numOfAgents) {
+
         List<Client> clients = new ArrayList<>();
         List<Car> cars = new ArrayList<>();
         List<Agent> agents = new ArrayList<>();
 
         for (int i = 1; i <= numOfClients; i++) {
+
+            String name;
+            while (true) {
+                System.out.println("Enter Client Name:");
+                name = sc.nextLine().trim();
+
+                if (!name.isEmpty()) {
+                    break;
+                } else {
+                    System.out.println("Invalid name! Client name cannot be empty.");
+                }
+            }
+
+            String phone;
+            while (true) {
+                System.out.println("Enter Phone Number (must be 11 digits):");
+                phone = sc.nextLine().trim();
+
+                if (phone.length() == 11 && phone.matches("\\d+")) {
+                    break;
+                } else {
+                    System.out.println("Invalid phone number! It must contain exactly 11 digits.");
+                }
+            }
+
+            System.out.println("Enter License Number:");
+            String licenseNum = sc.nextLine().trim();
+
+            String licenseExpiryDate;
+            while (true) {
+                System.out.println("Enter License Expiry Date (format: yyyy-MM-dd):");
+                licenseExpiryDate = sc.nextLine().trim();
+
+                LicenseDetails temp = new LicenseDetails(licenseNum, licenseExpiryDate, "None");
+
+                if (temp.isValid()) {
+                    break;
+                } else {
+                    System.out.println("Invalid or expired license date! Please enter a valid future date.");
+                }
+            }
+
+            ContactDetails contact = new ContactDetails(
+                    "Client Address",
+                    phone,
+                    name.replaceAll("\\s+", "").toLowerCase() + "@gmail.com"
+            );
+
             LicenseDetails license = new LicenseDetails(
-                    "LIC-" + i,
-                    LocalDate.now().plusYears(2),
+                    licenseNum,
+                    licenseExpiryDate,
                     "None"
             );
 
-            ContactDetails contact = new ContactDetails(
-                    "Address " + i,
-                    "070000000" + i,
-                    "client" + i + "@gmail.com"
-            );
-
-            clients.add(new Client(i, "Client " + i, license, contact));
+            clients.add(new Client(i, name, license, contact));
         }
 
         for (int i = 1; i <= numOfCars; i++) {
             Features features = new Features("Petrol", "Automatic", 5, "Economy");
-            InsuranceDetails insuranceDetails = new InsuranceDetails(
-                    "SafeCover",
-                    "Basic + Standard",
-                    "GPS, Child Seat"
-            );
+            InsuranceDetails insuranceDetails = new InsuranceDetails("SafeCover", "Standard/Premium", "GPS");
 
-            cars.add(new Car(i, "Toyota Yaris " + i, 50.0 * i, true, features, insuranceDetails));
+            cars.add(new Car(i, "Toyota " + i, 50.0, true, features, insuranceDetails));
         }
 
         for (int i = 1; i <= numOfAgents; i++) {
-            Branch branch = new Branch("Branch " + i, "Location " + i);
-            Schedule schedule = new Schedule("9AM - 5PM", true);
+            Branch branch = new Branch("Branch " + i, "London");
+            Schedule schedule = new Schedule("9AM-5PM", true);
 
             agents.add(new Agent(i, "Agent " + i, branch, schedule));
         }
@@ -51,25 +94,49 @@ public class CarRentalImplementer implements CRMS {
 
     @Override
     public BookingRecord Book(Client c, Car car, Agent a) {
-        if (c == null || car == null || a == null) {
-            throw new IllegalArgumentException("Client, car, and agent must not be null.");
-        }
 
-        if (!c.getLicenseDetails().isValid()) {
-            throw new IllegalArgumentException("Client driving license is not valid.");
-        }
+        int rentalDays;
+        while (true) {
+            System.out.println("Enter Rental Duration in Days:");
+            String input = sc.nextLine().trim();
 
-        if (!car.isAvailable()) {
-            throw new IllegalArgumentException("Selected car is not available.");
-        }
+            try {
+                rentalDays = Integer.parseInt(input);
 
-        if (!a.getSchedule().isAvailable()) {
-            throw new IllegalArgumentException("Assigned agent is not available.");
+                if (rentalDays > 0) {
+                    break;
+                } else {
+                    System.out.println("Invalid duration! Number of days must be greater than 0.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input! Please enter a valid number.");
+            }
         }
 
         LocalDate startDate = LocalDate.now().plusDays(1);
-        LocalDate endDate = startDate.plusDays(3);
-        long rentalDays = endDate.toEpochDay() - startDate.toEpochDay();
+        LocalDate endDate = startDate.plusDays(rentalDays);
+
+        while (true) {
+            try {
+                LocalDate expiryDate = c.getLicenseDetails().getValidUntilAsDate();
+
+                if (!expiryDate.isBefore(endDate)) {
+                    break;
+                } else {
+                    System.out.println("License expiry date is before the rental end date.");
+                    System.out.println("Rental ends on: " + endDate);
+                    System.out.println("Please re-enter a license expiry date that covers the full rental period.");
+
+                    String newExpiryDate = sc.nextLine().trim();
+                    c.getLicenseDetails().setValidUntil(newExpiryDate);
+                }
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format! Please enter the date as yyyy-MM-dd.");
+                String newExpiryDate = sc.nextLine().trim();
+                c.getLicenseDetails().setValidUntil(newExpiryDate);
+            }
+        }
+
         double baseCost = rentalDays * car.getDailyRate();
 
         return new BookingRecord(c, car, a, startDate, endDate, baseCost);
@@ -77,22 +144,42 @@ public class CarRentalImplementer implements CRMS {
 
     @Override
     public ProcessedRecord Process(BookingRecord br) {
-        if (br == null) {
-            throw new IllegalArgumentException("BookingRecord must not be null.");
-        }
 
         InsuranceOption insuranceOption;
         Discount discount;
 
-        if (br.getAgent().getAgentId() % 2 == 0) {
+        int insuranceChoice;
+        while (true) {
+            System.out.println("Choose Insurance Type:");
+            System.out.println("1. Standard");
+            System.out.println("2. Premium");
+
+            String input = sc.nextLine().trim();
+
+            try {
+                insuranceChoice = Integer.parseInt(input);
+
+                if (insuranceChoice == 1 || insuranceChoice == 2) {
+                    break;
+                } else {
+                    System.out.println("Invalid choice! Please enter 1 or 2.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input! Please enter 1 or 2.");
+            }
+        }
+
+        if (insuranceChoice == 2) {
             insuranceOption = new InsuranceOption(true, 40.0);
-            discount = new Discount("Promotional", 30.0);
+            discount = new Discount("Promo", 30.0);
         } else {
             insuranceOption = new InsuranceOption(false, 20.0);
             discount = new Discount("Loyalty", 10.0);
         }
 
-        double totalCost = br.getBaseCost() + insuranceOption.getExtraCost() - discount.getDiscountAmount();
+        double totalCost = br.getBaseCost()
+                + insuranceOption.getExtraCost()
+                - discount.getDiscountAmount();
 
         return new ProcessedRecord(
                 br.getClient(),
@@ -109,26 +196,17 @@ public class CarRentalImplementer implements CRMS {
 
     @Override
     public FinalizedRecord Finalize(ProcessedRecord pr) {
-        if (pr == null) {
-            throw new IllegalArgumentException("ProcessedRecord must not be null.");
-        }
 
         double deposit = pr.getTotalCost() * 0.30;
-        double outstandingBalance = pr.getTotalCost() - deposit;
+        double remaining = pr.getTotalCost() - deposit;
 
-        PaymentDetails paymentDetails = new PaymentDetails(
-                deposit,
-                pr.getTotalCost(),
-                outstandingBalance
-        );
+        PaymentDetails payment = new PaymentDetails(deposit, pr.getTotalCost(), remaining);
 
-        PickupDetails pickupDetails = new PickupDetails(
+        PickupDetails pickup = new PickupDetails(
                 pr.getAgent().getBranch(),
                 pr.getRentalStartDate(),
-                "Please bring your driving license and booking confirmation."
+                "Bring your driving license and booking confirmation."
         );
-
-        pr.getCar().setAvailable(false);
 
         return new FinalizedRecord(
                 pr.getClient(),
@@ -140,8 +218,8 @@ public class CarRentalImplementer implements CRMS {
                 pr.getInsuranceOption(),
                 pr.getDiscount(),
                 pr.getTotalCost(),
-                paymentDetails,
-                pickupDetails
+                payment,
+                pickup
         );
     }
 }
