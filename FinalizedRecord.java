@@ -32,13 +32,14 @@ public class FinalizedRecord  extends ProcessedRecord {
 
     @Override
     public String toString() {
-        return "FinalizedRecord{" +
-                "client=" + getClient().getName() +
-                ", car=" + getCar().getModel() +
-                ", agent=" + getAgent().getName() +
-                ", totalCost=" + getTotalCost() +
-                ", paymentDetails=" + paymentDetails +
-                ", pickupDetails=" + pickupDetails +
-                '}';
+        return "FinalizedRecord" +
+                " Client: " + getClient().getName() +
+                ", Car: " + getCar().getModel() +
+                ", Agent: " + getAgent().getName() +
+                ", TotalCost: " + getTotalCost() +
+                ", Deposit amount: " + paymentDetails.getDepositAmount() +
+                ", Remaining payment: "+paymentDetails.getOutstandingBalance()+
+                ", Branch: " + pickupDetails.getPickupBranch()
+                ;
     }
 }
