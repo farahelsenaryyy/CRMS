@@ -1,16 +1,19 @@
 package CRMS;
+
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 public class LicenseDetails {
     private String licenseNumber;
-    private LocalDate validUntil;
+    private String validUntil;   
     private String restrictions;
 
-    public LicenseDetails(String licenseNumber, LocalDate validUntil, String restrictions) {
+    public LicenseDetails(String licenseNumber, String validUntil, String restrictions) {
         this.licenseNumber = licenseNumber;
         this.validUntil = validUntil;
         this.restrictions = restrictions;
     }
+
     public String getLicenseNumber() {
         return licenseNumber;
     }
@@ -19,11 +22,11 @@ public class LicenseDetails {
         this.licenseNumber = licenseNumber;
     }
 
-    public LocalDate getValidUntil() {
+    public String getValidUntil() {
         return validUntil;
     }
 
-    public void setValidUntil(LocalDate validUntil) {
+    public void setValidUntil(String validUntil) {
         this.validUntil = validUntil;
     }
 
@@ -36,14 +39,23 @@ public class LicenseDetails {
     }
 
     public boolean isValid() {
-        return validUntil != null && !validUntil.isBefore(LocalDate.now());
+        try {
+            LocalDate expiryDate = LocalDate.parse(validUntil);
+            return !expiryDate.isBefore(LocalDate.now());
+        } catch (DateTimeParseException e) {
+            return false;
+        }
+    }
+
+    public LocalDate getValidUntilAsDate() {
+        return LocalDate.parse(validUntil);
     }
 
     @Override
     public String toString() {
         return "LicenseDetails{" +
                 "licenseNumber='" + licenseNumber + '\'' +
-                ", validUntil=" + validUntil +
+                ", validUntil='" + validUntil + '\'' +
                 ", restrictions='" + restrictions + '\'' +
                 '}';
     }
